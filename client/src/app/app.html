@@ -1,0 +1,18 @@
+
+<div class="card p-10 mt-10 shadow-xl mx-auto bg-base-100 w-1/2">
+<h1 class="text-3xl text-red-500 font-extrabold">{{title()}}</h1>
+<ul class="list">
+    @for (member of members(); track $index) {
+        <li class="list-row items-center">
+                <img class="rounded-box size-12" src="/user.png" alt="{{member.displayName}}">
+
+            <div>
+                   {{member.id}} - {{member.displayName}}
+            </div>
+         
+
+        </li>
+    }
+</ul>
+</div>
+
