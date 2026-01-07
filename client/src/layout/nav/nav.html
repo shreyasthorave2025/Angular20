@@ -24,8 +24,12 @@
       <a [routerLinkActiveOptions]="{exact:true}" routerLinkActive="text-accent" routerLink="/errors"
         class="hover:text-gray-300">Test Errors</a>
       }
-
     </nav>
+
+    @if (busyService.busyRequestCount()>0) {
+    <span class="loading loading-spinner text-accent"> </span>
+    }
+
     <div class="flex align-middle ml-auto gap-3">
       <div class="dropdown mr-5 dropdown-end">
         <button tabindex="1" class="flex flex-col justify-center align-middle text-white
@@ -37,7 +41,7 @@
           </svg>
           <span>{{selectedTheme()}}</span>
         </button>
-        <ul tabindex="1" class="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm">
+        <ul tabindex="1" class="dropdown-content menu bg-base-100 rounded-box z-50 w-52 p-2 shadow-sm">
           @for (theme of themes; track $index) {
           <li (click)="handleSelectTheme(theme)">
             <a>{{theme}}</a>
@@ -47,14 +51,14 @@
       </div>
 
 
-      @if (accountService.currentUser(); as User) {
+      @if (accountService.currentUser(); as user) {
       <div class="dropdown dropdown-end">
         <div tabindex="0" role="button" class="flex items-center text-white text-xl gap-3 cursor-pointer">
-          <img [src]="User?.imageUrl || '/user.png'" alt="User Avatar" class="w-8 h-8 rounded-full">
-          <span class="ml-2">{{ User?.displayName }}</span>
+          <img [src]="user?.imageUrl || '/user.png'" alt="User Avatar" class="w-8 h-8 rounded-full">
+          <span class="ml-2">{{ user?.displayName }}</span>
         </div>
         <ul tabindex="-1" class="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm">
-          <li><a>Edit Profile</a></li>
+          <li><a routerLink="/members/{{user.id}}">Edit Profile</a></li>
           <li><a (click)="logout()">Logout</a></li>
         </ul>
       </div>

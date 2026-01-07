@@ -1,55 +1,73 @@
 # Copilot / AI agent instructions — DatingApp (root)
 
-Quick orientation
-- Fullstack repo: frontend in `client/` (Angular v20, standalone components, signals) and backend in `API/` (.NET 9, controllers + EF Core). The client talks to the API at `https://localhost:5001/api/` by default (see `client/src/environments/*`).
+## Quick orientation 🚀
+- Fullstack repo: **frontend** in `client/` (Angular v20 — standalone components, signals) and **backend** in `API/` (.NET 9 with controllers + EF Core).
+- Communication: frontend calls the API under `/api` (base URL configured in `client/src/environments/*`, default `https://localhost:5001/api/`).
+- DB: SQLite by default (connection string `DefaultConnection` in `API/appsettings*.json`).
 
-How to run locally
+---
+
+## Run & debug (concrete commands) 🔧
 - Backend (API):
-  - From repository root: `cd API` then `dotnet run` (Program auto-applies EF migrations & seeds on startup).
-  - Manual EF work: `dotnet ef migrations add <Name> --project API --startup-project API` and `dotnet ef database update --project API --startup-project API`.
+  - Start: from repo root `cd API && dotnet run` (Program auto-applies EF migrations and seeds on startup).
+  - Manual EF: `dotnet ef migrations add <Name> --project API --startup-project API` and `dotnet ef database update --project API --startup-project API`.
+  - Note: **TokenKey** must exist and be ≥ 64 chars (set in `appsettings.Development.json` or environment variable `TokenKey`).
+  - CORS origins are set in `Program.cs` — ensure `http://localhost:4200` is allowed when running locally.
 - Frontend (client):
-  - `cd client` then `npm install` and `ng serve` (dev server at `http://localhost:4200/`).
-  - Build: `ng build`.
-- Tests: `ng test` (Karma) for client. No dedicated backend test project exists in this repo.
+  - Start dev server: `cd client && npm install && ng serve` (app at `http://localhost:4200/`).
+  - Build: `cd client && ng build`.
+- Tests: `cd client && ng test` (Karma). There is no dedicated backend test project.
 
-Key integration points & patterns (be concrete)
-- Auth flow:
-  - Endpoints: `POST api/account/register`, `POST api/account/login` (see `API/Controllers/AccountController.cs`).
-  - Login/registration return a `UserDto` (see `API/DTOs/UserDto.cs`) containing a JWT token. The token must be attached as `Authorization: Bearer <token>` — client interceptor at `client/src/core/interceptors/jwt-interceptor.ts` does this.
-  - Token generation is in `API/Services/TokenService.cs`. **TokenKey** is read from `API/appsettings.Development.json` and must be at least 64 characters (service throws otherwise).
-- Data layer:
-  - EF Core DbContext: `API/Data/AppDbContext.cs`. Entities live in `API/Entities/` and DTOs in `API/DTOs/`.
-  - Repository pattern used for members: `IMemberRepository` + `MemberRepository` (see `API/Data/MemberRepository.cs`). Controllers call repositories via dependency injection.
-  - Seeding: `API/Data/Seed.cs` reads `API/Data/UserSeedData.json` and creates users/members.
-- Error handling:
-  - Global exception middleware: `API/Middleware/ExceptionMiddleware.cs`. It returns a camelCased `ApiException` (stack trace only in Development).
-  - Client error parsing is in `client/src/core/interceptors/error-interceptor.ts`. It expects model-state errors under `error.error.errors` for 400, routes 500 to `/server-error` with navigation state.
+---
 
-Client-side conventions & examples
-- Angular patterns used throughout:
-  - Standalone components and `inject()`-based DI (avoid constructor injection in new code).
-  - Use `signal()` for component state and `computed()` for derived state.
-  - Use Reactive forms over template-driven forms where applicable.
-  - Use `ChangeDetectionStrategy.OnPush` for components (existing code follows this pattern).
-  - Use `NgOptimizedImage` for static images.
-- HTTP & services:
-  - Base API URL is in `client/src/environments/*` and typically points to `https://localhost:5001/api/`.
-  - Interceptors are used for JWT and error handling (see `client/src/core/interceptors/*`).
-- Example TODO present: `client/src/core/services/member-service.ts` has an unimplemented `getMemberPhotos()` — use `GET api/members/{memberId}/photos`.
+## Big-picture architecture & design decisions 🔁
+- Backend: small API controllers call repositories (repository pattern) and map to DTOs — avoid returning EF entities directly.
+  - DbContext: `API/Data/AppDbContext.cs`.
+  - Member repository: `API/Data/MemberRepository.cs` (interface `IMemberRepository`).
+  - Seed data lives in `API/Data/Seed.cs` and `API/Data/UserSeedData.json`.
+- Frontend: Angular v20 using **signals** for local state (`signal()`), `computed()` for derived state, and `inject()`-based DI (prefer over constructors).
+  - Components are standalone and use `ChangeDetectionStrategy.OnPush`.
+- Auth & security:
+  - Endpoints: `POST api/account/register` and `POST api/account/login` (see `API/Controllers/AccountController.cs`).
+  - `TokenService` (`API/Services/TokenService.cs`) generates JWTs; client attaches token via `client/src/core/interceptors/jwt-interceptor.ts`.
+- Error handling: global middleware `API/Middleware/ExceptionMiddleware.cs`. Client expects model-state errors under `error.error.errors` and routes 500 errors to `/server-error` (see `client/src/core/interceptors/error-interceptor.ts`).
 
-Common developer tasks & pitfalls
-- If you see `401 Unauthorized`:
-  - Confirm the client sends `Authorization` header (check `jwt-interceptor.ts`), ensure `TokenKey` is configured and long enough, and CORS includes `http://localhost:4200` (see `API/Program.cs`).
-- For DB schema changes: add EF migration (`dotnet ef migrations add ...`) and update DB or just run `dotnet run` to allow automatic migrations during startup (be mindful of environment).
-- When adding controllers: inherit `BaseApiController` for consistent routing (`[Route("api/[controller]")]`).
+---
 
-Files to inspect for concrete examples
-- API: `API/Program.cs`, `API/Services/TokenService.cs`, `API/Data/Seed.cs`, `API/Controllers/*`, `API/DTOs/*`, `API/Entities/*`.
-- Client: `client/src/environments/*`, `client/src/core/interceptors/*`, `client/src/core/services/*`, `client/src/features/*` (members, account, errors).
+## Project-specific conventions & patterns ✅
+- Angular:
+  - Use **standalone components** (the project is built this way) and **do not** add `standalone: true` — it's the default for new components.
+  - Prefer `signal()` for local component state and `computed()` for derived values.
+  - Use the `inject()` function for DI rather than constructor injection in new code.
+  - Use `ChangeDetectionStrategy.OnPush` and `NgOptimizedImage` for static images.
+  - Prefer Reactive Forms over template-driven forms.
+  - Avoid `@HostListener`/`@HostBinding` — use the `host` object in decorators instead.
+- Backend/API:
+  - New controllers should inherit `BaseApiController` for consistent routing and behaviors.
+  - Prefer DTOs and repository calls; add migrations and keep DB seeding idempotent.
 
-Style guidance for AI edits (be specific to repo)
-- Follow existing patterns — when adding endpoints prefer DTOs and repository calls rather than exposing EF entities directly.
-- Use `inject()` and signals for new Angular code; follow current file conventions (single responsibility, small components, reactive forms).
-- Prefer small, focused PRs: include a simple behavioral test (manual repro steps) and a note about any DB migrations.
+---
 
-If anything here is unclear or you want extra examples (e.g., a sample controller PR, or a small client feature implemented), tell me which area to expand and I'll iterate. ✅
+## Integration & hotspots to inspect 🕵️‍♀️
+- Auth: `API/Services/TokenService.cs`, `API/Controllers/AccountController.cs`, `client/src/core/interceptors/jwt-interceptor.ts`.
+- Errors: `API/Middleware/ExceptionMiddleware.cs`, `client/src/core/interceptors/error-interceptor.ts`.
+- Seed/Migrations: `API/Data/Seed.cs`, `API/Migrations/*`.
+- Repositories: `API/Data/MemberRepository.cs`, `API/Interfaces/IMemberRepository.cs`.
+- Notable TODO: `client/src/core/services/member-service.ts` — `getMemberPhotos()` is unimplemented (call `GET api/members/{memberId}/photos`).
+
+---
+
+## Common pitfalls & debugging tips ⚠️
+- 401 errors: verify client sends `Authorization` header (see `jwt-interceptor.ts`), ensure `TokenKey` is set and ≥ 64 chars, and CORS includes the client origin.
+- If migrations are out of sync: run `dotnet ef database update` or restart the API (it runs migrations on startup).
+- When returning validation errors from the API, put them under the standard model state structure so the client interceptor can flatten them (`error.error.errors`).
+
+---
+
+## PR & change guidance ✍️
+- Keep PRs small and focused. If you add schema changes include an EF migration + note about running `dotnet ef` or that migrations run on startup.
+- Add manual test steps (how to exercise the change in the UI and API). Mention any required env vars (e.g., `TokenKey`).
+
+---
+
+If anything here looks off or you'd like me to add short code examples (controller template, DTO, or a small Angular signal-based component), say which area to expand and I'll iterate. ✅
